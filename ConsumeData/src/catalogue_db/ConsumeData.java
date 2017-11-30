@@ -1,4 +1,3 @@
-//MySQL Database Sakila
 package catalogue_db;
 
 import java.sql.Connection;
@@ -9,13 +8,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.InputMismatchException;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-// or import java.sql.*;
 
 /**
  *
- * @author AsusGL702Vm
+ * @author padoura
  */
 public class ConsumeData {
 
@@ -25,6 +21,8 @@ public class ConsumeData {
     //Database credentials
     static final String USER = "test_catalogue_user";
     static final String PASS = "test";
+    static Connection conn = null;
+    static Statement stmt = null;
 
     public static void main(String[] args) throws ClassNotFoundException {
         test2();
@@ -62,24 +60,7 @@ public class ConsumeData {
     }
     
     public static void test2(){
-        Connection conn = null;
-        Statement stmt = null;
-
-
-        try {
-            //STEP 2: Register JDBC driver
-            Class.forName("com.mysql.jdbc.Driver");
-        } catch (ClassNotFoundException ex) {
-            System.out.println("Eskase o Driver re malaka!");
-        }
-
-        //STEP 3: Open a connection
-        System.out.println("Connecting to database...");
-        try {
-            conn = DriverManager.getConnection(DB_URL, USER, PASS);
-        } catch (SQLException ex) {
-            System.out.println("Eskase h sindesi re malaka!");
-        }
+        connect();
 
         //STEP 4: Execute a query 
         System.out.println("Creating statement...");
@@ -96,55 +77,25 @@ public class ConsumeData {
             //STEP 5: Extract data from result set
             while (rs.next()) {
                 //Retrieve by column name
-                int memberID = rs.getInt("member_id");
-                String firstname = rs.getString("f_name");
-                String lastname = rs.getString("l_name");
-                String landline = rs.getString("landline");
-                String mobile = rs.getString("mobile");
-
-//                //Display Values
-//                System.out.println("ActorID: " + memberID);
-//                System.out.println(", First name: " + firstname);
-//                System.out.println(", Last name: " + lastname);
-//                System.out.println(", Landline phone: " + landline);
-//                System.out.println(", Mobile phone: " + mobile);
+                User user = new User();
+                user.id = rs.getInt("member_id");
+                user.firstname = rs.getString("f_name");
+                user.lastname = rs.getString("l_name");
+                user.landline = rs.getString("landline");
+                user.mobile = rs.getString("mobile");
             }
             //STEP 6 : Clean-up enviroment
             rs.close();
+            closeConnection();
         } catch (SQLException ex) {
             System.out.println("Moufa to query...");
         }
 
-        try {
-            stmt.close();
-        } catch (SQLException ex) {
-            System.out.println("Tin ekane to statement...");
-        }
-        try {
-            conn.close();
-        } catch (SQLException ex) {
-            System.out.println("Paei i sindesi...");
-        }
-        System.out.println("Finished!");
+
     }
     
     public static void insertTable(){
-        Connection conn = null;
-        Statement stmt = null;
-        try {
-            //STEP 2: Register JDBC driver
-            Class.forName("com.mysql.jdbc.Driver");
-        } catch (ClassNotFoundException ex) {
-            System.out.println("Eskase o Driver re!");
-        }
-
-        //STEP 3: Open a connection
-        System.out.println("Connecting to database...");
-        try {
-            conn = DriverManager.getConnection(DB_URL, USER, PASS);
-        } catch (SQLException ex) {
-            System.out.println("Eskase h sindesi re malaka!");
-        }
+        connect();
 
         //STEP 4: Execute a query 
         System.out.println("Creating statement...");
@@ -162,22 +113,13 @@ public class ConsumeData {
                 + "('Ria', 'Riadi', 2110000301, 6987320383);";
         try {
         int rs = stmt.executeUpdate(sql);
+        System.out.println("Sample data successfully inserted!");
             //STEP 6 : Clean-up enviroment
         } catch (SQLException ex) {
             System.out.println("Moufa to query...");
         }
-
-        try {
-            stmt.close();
-        } catch (SQLException ex) {
-            System.out.println("Tin ekane to statement...");
-        }
-        try {
-            conn.close();
-        } catch (SQLException ex) {
-            System.out.println("Paei i sindesi...");
-        }
-        System.out.println("Finished!");
+        
+        closeConnection();
     }
     
     public static void searchUser(){
@@ -187,23 +129,7 @@ public class ConsumeData {
         System.out.println("Please give your First Name:");
         String firstname = scanner.nextLine();
         
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        
-        try {
-            //STEP 2: Register JDBC driver
-            Class.forName("com.mysql.jdbc.Driver");
-        } catch (ClassNotFoundException ex) {
-            System.out.println("Eskase o Driver re malaka!");
-        }
-
-        //STEP 3: Open a connection
-        System.out.println("Connecting to database...");
-        try {
-            conn = DriverManager.getConnection(DB_URL, USER, PASS);
-        } catch (SQLException ex) {
-            System.out.println("Eskase h sindesi re malaka!");
-        }
+        connect();
 
         //STEP 4: Execute a query 
         System.out.println("Creating statement...");
@@ -211,15 +137,15 @@ public class ConsumeData {
         sql = "SELECT * FROM members WHERE l_name = ? AND f_name = ?";
         try {
             stmt = conn.prepareStatement(sql);
-            stmt.setString(1, lastname);
-            stmt.setString(2, firstname);
+            ((PreparedStatement) stmt).setString(1, lastname);
+            ((PreparedStatement) stmt).setString(2, firstname);
         } catch (SQLException ex) {
             System.out.println("Paei to statement gia vrouves");
         }
         ResultSet rs;
         try {
             
-            rs = stmt.executeQuery();
+            rs = ((PreparedStatement) stmt).executeQuery();
             //STEP 5: Extract data from result set
             if (rs.next()) {
                 //Retrieve by column name
@@ -245,18 +171,7 @@ public class ConsumeData {
         } catch (SQLException ex) {
             System.out.println("Moufa to query...");
         }
-
-        try {
-            stmt.close();
-        } catch (SQLException ex) {
-            System.out.println("Tin ekane to statement...");
-        }
-        try {
-            conn.close();
-        } catch (SQLException ex) {
-            System.out.println("Paei i sindesi...");
-        }
-        System.out.println("Finished!");
+        closeConnection();
     }
     
     public static void updateLandline(){
@@ -266,23 +181,7 @@ public class ConsumeData {
         System.out.println("Please give your new landline phone:");
         String landline = scanner.nextLine();
         
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        
-        try {
-            //STEP 2: Register JDBC driver
-            Class.forName("com.mysql.jdbc.Driver");
-        } catch (ClassNotFoundException ex) {
-            System.out.println("Eskase o Driver re malaka!");
-        }
-
-        //STEP 3: Open a connection
-        System.out.println("Connecting to database...");
-        try {
-            conn = DriverManager.getConnection(DB_URL, USER, PASS);
-        } catch (SQLException ex) {
-            System.out.println("Eskase h sindesi re malaka!");
-        }
+        connect();
 
         //STEP 4: Execute a query 
         System.out.println("Creating statement...");
@@ -290,14 +189,14 @@ public class ConsumeData {
         sql = "UPDATE members SET landline = ? WHERE l_name = ? LIMIT 1";
         try {
             stmt = conn.prepareStatement(sql);
-            stmt.setString(1, landline);
-            stmt.setString(2, lastname);
+            ((PreparedStatement) stmt).setString(1, landline);
+            ((PreparedStatement) stmt).setString(2, lastname);
         } catch (SQLException ex) {
             System.out.println("Paei to statement gia vrouves");
         }
         int rs;
         try {
-            rs = stmt.executeUpdate();
+            rs = ((PreparedStatement) stmt).executeUpdate();
             //STEP 5: Extract data from result set
             if (rs > 0) {
                 System.out.println("Landline phone successfully updated!");
@@ -307,39 +206,11 @@ public class ConsumeData {
         } catch (SQLException ex) {
             System.out.println("Moufa to query...");
         }
-
-        try {
-            stmt.close();
-        } catch (SQLException ex) {
-            System.out.println("Tin ekane to statement...");
-        }
-        try {
-            conn.close();
-        } catch (SQLException ex) {
-            System.out.println("Paei i sindesi...");
-        }
-        System.out.println("Finished!");
+        closeConnection();
     }
     
    public static void countMembers(){
-        Connection conn = null;
-        Statement stmt = null;
-
-
-        try {
-            //STEP 2: Register JDBC driver
-            Class.forName("com.mysql.jdbc.Driver");
-        } catch (ClassNotFoundException ex) {
-            System.out.println("Eskase o Driver re malaka!");
-        }
-
-        //STEP 3: Open a connection
-        System.out.println("Connecting to database...");
-        try {
-            conn = DriverManager.getConnection(DB_URL, USER, PASS);
-        } catch (SQLException ex) {
-            System.out.println("Eskase h sindesi re malaka!");
-        }
+        connect();
 
         //STEP 4: Execute a query 
         System.out.println("Creating statement...");
@@ -367,17 +238,7 @@ public class ConsumeData {
             System.out.println("Moufa to query...");
         }
 
-        try {
-            stmt.close();
-        } catch (SQLException ex) {
-            System.out.println("Tin ekane to statement...");
-        }
-        try {
-            conn.close();
-        } catch (SQLException ex) {
-            System.out.println("Paei i sindesi...");
-        }
-        System.out.println("Finished!");
+        closeConnection();
     }
 
     private static void terminate() {
@@ -392,6 +253,39 @@ public class ConsumeData {
             System.out.println("(4) Check Total Number of Members");
             System.out.println("(0) Exit");
     }
+    
+    private static void connect(){
+        try {
+            //STEP 2: Register JDBC driver
+            Class.forName("com.mysql.jdbc.Driver");
+        } catch (ClassNotFoundException ex) {
+            System.out.println("Eskase o Driver re malaka!");
+        }
+
+        //STEP 3: Open a connection
+        System.out.println("Connecting to database...");
+        try {
+            conn = DriverManager.getConnection(DB_URL, USER, PASS);
+        } catch (SQLException ex) {
+            System.out.println("Eskase h sindesi re malaka!");
+        }
+    }
+    
+    private static void closeConnection(){
+        try {
+            stmt.close();
+        } catch (SQLException ex) {
+            System.out.println("Tin ekane to statement...");
+        }
+        try {
+            conn.close();
+        } catch (SQLException ex) {
+            System.out.println("Paei i sindesi...");
+        }
+        System.out.println("Connection finished!");
+    }
+    
+    
 
     private static class User {
         

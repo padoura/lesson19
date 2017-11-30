@@ -404,6 +404,50 @@ public class ConsumeData {
     }
     
     private static void searchBirthday(){
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Please give a date (format: (yyyy-MM-DD):");
+        LocalDate birthday = LocalDate.parse(scanner.nextLine());
+        
+        connect();
+
+        //STEP 4: Execute a query
+        System.out.println("Creating statement...");
+        String sql;
+        sql = "SELECT * FROM birthdays NATURAL JOIN members WHERE birthday = ?;";
+        try {
+            stmt = conn.prepareStatement(sql);
+            ((PreparedStatement) stmt).setDate(1, Date.valueOf(birthday));
+        } catch (SQLException ex) {
+            System.out.println("Paei to statement gia vrouves");
+        }
+        try {
+            rs = ((PreparedStatement) stmt).executeQuery();
+            //STEP 5: Extract data from result set
+            if (rs.next()){
+                do{
+                    //Retrieve by column name
+                    User user = new User();
+                    user.id = rs.getInt("member_id");
+                    user.firstname = rs.getString("f_name");
+                    user.lastname = rs.getString("l_name");
+                    user.birthday = rs.getDate("birthday");
+
+                    //Display Values
+                    System.out.println("- ActorID: " + user.id);
+                    System.out.println("- First name: " + user.firstname);
+                    System.out.println("- Last name: " + user.lastname);
+                    System.out.println("- Date of Birth: " + user.birthday);
+                }while (rs.next());
+            }else{
+                System.out.println("Noone has birthday on " + birthday);
+            }
+            //STEP 6 : Clean-up enviroment
+            rs.close();
+        } catch (SQLException ex) {
+            System.out.println("Moufa to query...");
+        }finally{
+            closeConnection();
+        }
         
     }
 
@@ -424,7 +468,7 @@ public class ConsumeData {
             while (it.hasNext()){
                 User user = it.next();
                 System.out.println("Please give birthday date of " + user.firstname + " " + user.lastname + " (format: (yyyy-MM-DD):");
-                LocalDate birthday = LocalDate.parse(scanner.nextLine());
+                LocalDate birthday = LocalDate.parse(scanner.nextLine()); //TO DO: create method that handles wrong input formats
                 try {
                     stmt = conn.prepareStatement(sql);
                     ((PreparedStatement) stmt).setInt(1, user.id);
@@ -434,7 +478,6 @@ public class ConsumeData {
                 }
                 try {
                     int rs = ((PreparedStatement) stmt).executeUpdate();
-                    //STEP 5: Extract data from result set
                     if (rs > 0) {
                         System.out.println("New birthday successfully inserted!");
                     }else{
@@ -453,6 +496,7 @@ public class ConsumeData {
         protected String lastname;
         protected String landline;
         protected String mobile;
+        protected Date birthday;
         public User() {
         }
     }

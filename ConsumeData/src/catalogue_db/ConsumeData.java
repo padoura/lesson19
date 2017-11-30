@@ -1,5 +1,8 @@
 package catalogue_db;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
@@ -12,6 +15,8 @@ import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Iterator;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -42,6 +47,7 @@ public class ConsumeData {
 		
 		while(choice != 0){
 			try{
+//                                clearConsole();
 				printMenu();
 				choice = menuScanner.nextInt();
 				menuScanner.nextLine();
@@ -60,13 +66,15 @@ public class ConsumeData {
                                                 break;
                                 case 7: resetDb();
                                                 break;
+                                case 10: createSQLScript();
+                                                break;
 				case 0: terminate();
 						break;
-				default: System.out.println("Choice out of range! Please type from 0 to 7!");
+				default: System.out.println("Choice out of range! Please type from 0 to 10!");
 				}
 			}
 			catch (InputMismatchException e) {
-				System.out.println("Invalid input! Please type a number from 0 to 8!");
+				System.out.println("Invalid input! Please type a number from 0 to 10!");
 				menuScanner.nextLine();
 			}
 		}
@@ -266,6 +274,9 @@ public class ConsumeData {
             System.out.println("(5) Insert All birthdays");
             System.out.println("(6) Find People Per birthday");
             System.out.println("(7) Reset Database");
+            System.out.println("(8) Copy Members Table via Simple MySQL");
+            System.out.println("(9) Copy Members Table via MySQL");
+            System.out.println("(10) Generate Schema's SQL script");
             System.out.println("(0) Exit");
     }
     
@@ -315,6 +326,7 @@ public class ConsumeData {
                 System.out.println("Paei i sindesi...");
             }
             System.out.println("Connection finished!");
+            waitForEnter();
         }
     }
     
@@ -489,6 +501,51 @@ public class ConsumeData {
             }
             closeConnection();
     }
+
+    private static void createSQLScript() {
+        connect();
+        
+        //STEP 4: Execute a query 
+        System.out.println("Creating statements...");
+        String sql;
+        sql = "SHOW CREATE DATABASE test_catalogue;";
+        try {
+            stmt = conn.createStatement();
+        } catch (SQLException ex) {
+            System.out.println("Paei to statement gia vrouves");
+            closeConnection();
+        }
+        
+        try {
+            rs = stmt.executeQuery(sql);
+            StringBuilder buffer = new StringBuilder();
+            if (rs.next()){
+                buffer.append(rs.getString(2)+ "\n");
+            }
+            sql = "SHOW CREATE TABLE members;";
+            rs = stmt.executeQuery(sql);
+            if (rs.next()){
+                buffer.append(rs.getString(2)+ "\n");
+            }
+            sql = "SHOW CREATE TABLE birthdays;";
+            rs = stmt.executeQuery(sql);
+            if (rs.next()){
+                buffer.append(rs.getString(2) + "\n");
+            }
+            sql = "INSERT INTO members (f_name, l_name, landline, mobile)" +
+                " VALUES ('Alex', 'Alexiadis', 2100002000, 6979320382)," +
+                "('Mike', 'Michailidis', 2100000201, 6979320383)," +
+                "('Antonis', 'Antoniadis', 2100000201, 6979320383);\n";
+            buffer.append(sql);
+            fileWrite(buffer);
+            System.out.println("SQL script successfully created!");
+            rs.close();
+        } catch (SQLException ex) {
+            System.out.println("Queries could not be executed...");
+        }finally{
+            closeConnection();
+        }
+    }
     
     private static class User {
         protected int id;
@@ -500,6 +557,64 @@ public class ConsumeData {
         public User() {
         }
     }
+    
+    private static void fileWrite(StringBuilder buffer){
+        String filename = "create_test_catalogue.sql";
+        File file = new File(filename);
+
+        try {
+            file.createNewFile();
+        } catch (IOException ex) {
+            
+        }
+
+        // creates a FileWriter Object
+        FileWriter writer = null; 
+        try {
+            writer = new FileWriter(file);
+        } catch (IOException ex) {
+            
+        }
+
+        try {
+            writer.write(buffer.toString());
+        } catch (IOException ex) {
+           
+        }
+        
+        try {
+            writer.flush();
+        } catch (IOException ex) {
+            
+        }
+        
+        try {
+            writer.close();
+        } catch (IOException ex) {
+           
+        }
+    }
+    
+    
+    private static void waitForEnter() {
+        Scanner scn = new Scanner(System.in);
+        System.out.println("Press Enter to continue...");
+        scn.nextLine();
+    }
+//    
+//    private static void clearConsole(){
+//        final String os = System.getProperty("os.name");
+//        try {
+//            if (os.contains("Windows")){
+//                Runtime.getRuntime().exec("\033[H\033[2J");
+//            }
+//            else{
+//                Runtime.getRuntime().exec("clear");
+//            }
+//        } catch (IOException e) {
+//               e.printStackTrace();
+//        }
+//    }
     
     
     

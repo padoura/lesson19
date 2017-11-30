@@ -157,11 +157,11 @@ public class ConsumeData {
                 user.mobile = rs.getString("mobile");
 
                 //Display Values
-                System.out.println("ActorID: " + user.id);
-                System.out.println(", First name: " + user.firstname);
-                System.out.println(", Last name: " + user.lastname);
-                System.out.println(", Landline phone: " + user.landline);
-                System.out.println(", Mobile phone: " + user.mobile);
+                System.out.println("- ActorID: " + user.id);
+                System.out.println("- First name: " + user.firstname);
+                System.out.println("- Last name: " + user.lastname);
+                System.out.println("- Landline phone: " + user.landline);
+                System.out.println("- Mobile phone: " + user.mobile);
                 
             }else{
                 System.out.println("No such user exists!");

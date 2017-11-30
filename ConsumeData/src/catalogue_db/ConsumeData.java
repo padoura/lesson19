@@ -23,10 +23,13 @@ public class ConsumeData {
     static final String PASS = "test";
     static Connection conn = null;
     static Statement stmt = null;
+    static ResultSet rs = null;
 
-    public static void main(String[] args) throws ClassNotFoundException {
-        test2();
-        mainMenu();      
+    public static void main(String[] args){
+        if (test2())
+            mainMenu();
+        else
+            System.out.println("Database could not be reached. Please ask your database administrator."); 
     }//end main
     
     public static void mainMenu() {
@@ -47,19 +50,23 @@ public class ConsumeData {
 						break;
 				case 4: countMembers();
 						break;
+                                case 5: createBirthdayTable();
+                                        break;
+                                case 8: resetDb();
+                                                break;
 				case 0: terminate();
 						break;
-				default: System.out.println("Choice out of range! Please type from 0 to 7!");
+				default: System.out.println("Choice out of range! Please type from 0 to 8!");
 				}
 			}
 			catch (InputMismatchException e) {
-				System.out.println("Invalid input! Please type a number from 0 to 7!");
+				System.out.println("Invalid input! Please type a number from 0 to 8!");
 				menuScanner.nextLine();
 			}
 		}
     }
     
-    public static void test2(){
+    public static boolean test2(){
         connect();
 
         //STEP 4: Execute a query 
@@ -68,10 +75,10 @@ public class ConsumeData {
             stmt = conn.createStatement();
         } catch (SQLException ex) {
             System.out.println("Paei to statement gia vrouves");
+            return false;
         }
         String sql;
         sql = "SELECT * FROM members";
-        ResultSet rs;
         try {
             rs = stmt.executeQuery(sql);
             //STEP 5: Extract data from result set
@@ -84,14 +91,15 @@ public class ConsumeData {
                 user.landline = rs.getString("landline");
                 user.mobile = rs.getString("mobile");
             }
-            //STEP 6 : Clean-up enviroment
             rs.close();
-            closeConnection();
+            return true;
         } catch (SQLException ex) {
             System.out.println("Moufa to query...");
+            return false;
+        } finally{
+            //STEP 6 : Clean-up enviroment
+            closeConnection();
         }
-
-
     }
     
     public static void insertTable(){
@@ -142,7 +150,6 @@ public class ConsumeData {
         } catch (SQLException ex) {
             System.out.println("Paei to statement gia vrouves");
         }
-        ResultSet rs;
         try {
             
             rs = ((PreparedStatement) stmt).executeQuery();
@@ -221,7 +228,6 @@ public class ConsumeData {
         }
         String sql;
         sql = "SELECT count(*) AS count FROM members";
-        ResultSet rs;
         try {
             rs = stmt.executeQuery(sql);
             //STEP 5: Extract data from result set
@@ -251,15 +257,35 @@ public class ConsumeData {
             System.out.println("(2) Find Member");
             System.out.println("(3) Update Landline Phone");
             System.out.println("(4) Check Total Number of Members");
+            System.out.println("(5) Create Table Birthdays");
+            System.out.println("(6) Insert All birthdays");
+            System.out.println("(7) Find People Per birthday");
+            System.out.println("(8) Reset Database");
             System.out.println("(0) Exit");
     }
     
     private static void connect(){
+        int flag = 0;
+        while(flag < 100){
+            String event = tryConnection();
+            switch (event) {
+                case "ok": flag = 100;
+                            break;
+                case "driver": System.out.println("No MySQL driver found. Please install it.");
+                                flag = 100;
+                                break;
+                case "db": System.out.println("Database connection problem! Retrying connection...");
+                            flag++;
+            }
+        }
+    }
+    
+    private static String tryConnection(){
         try {
             //STEP 2: Register JDBC driver
             Class.forName("com.mysql.jdbc.Driver");
         } catch (ClassNotFoundException ex) {
-            System.out.println("Eskase o Driver re malaka!");
+            return "driver";
         }
 
         //STEP 3: Open a connection
@@ -267,8 +293,9 @@ public class ConsumeData {
         try {
             conn = DriverManager.getConnection(DB_URL, USER, PASS);
         } catch (SQLException ex) {
-            System.out.println("Eskase h sindesi re malaka!");
-        }
+            return "db";
+        } 
+        return "ok";
     }
     
     private static void closeConnection(){
@@ -276,14 +303,67 @@ public class ConsumeData {
             stmt.close();
         } catch (SQLException ex) {
             System.out.println("Tin ekane to statement...");
+        } finally {
+            try {
+                conn.close();
+            } catch (SQLException ex) {
+                System.out.println("Paei i sindesi...");
+            }
+            System.out.println("Connection finished!");
         }
-        try {
-            conn.close();
-        } catch (SQLException ex) {
-            System.out.println("Paei i sindesi...");
-        }
-        System.out.println("Connection finished!");
     }
+    
+    private static void resetDb(){
+        connect();
+        
+        //STEP 4: Execute a query 
+        System.out.println("Creating statements...");
+        String sql;
+        sql = "DROP TABLE members;";
+        try {
+            stmt = conn.createStatement();
+        } catch (SQLException ex) {
+            System.out.println("Paei to statement gia vrouves");
+            closeConnection();
+        }
+        
+        try {
+            stmt.addBatch(sql);
+            sql = "CREATE TABLE members (" +
+                "member_id int AUTO_INCREMENT," +
+                " f_name text," +
+                " l_name text," +
+                " landline text," +
+                " mobile text," +
+                " PRIMARY KEY (member_id)" +
+                ");";
+            stmt.addBatch(sql);
+            sql = "INSERT INTO members (f_name, l_name, landline, mobile)" +
+                   " VALUES ('Alex', 'Alexiadis', 2100002000, 6979320382)," +
+                    "('Mike', 'Michailidis', 2100000201, 6979320383)," +
+                    "('Antonis', 'Antoniadis', 2100000201, 6979320383);";
+            stmt.addBatch(sql);
+            stmt.executeBatch();
+        } catch (SQLException ex) {
+            System.out.println("Moufa to query...");
+        }finally{
+            closeConnection();
+        }
+    }
+
+    private static void createBirthdayTable() {
+        
+        
+        String sql = "CREATE TABLE birthdays (" +
+            "member_id int AUTO_INCREMENT," +
+            " f_name text," +
+            " l_name text," +
+            " landline text," +
+            " mobile text," +
+            " PRIMARY KEY (member_id)" +
+            ");";
+    }
+    
     
     
 

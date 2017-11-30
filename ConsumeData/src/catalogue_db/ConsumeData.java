@@ -1,12 +1,16 @@
 package catalogue_db;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.InputMismatchException;
+import java.util.Iterator;
 import java.util.Scanner;
 
 /**
@@ -50,13 +54,15 @@ public class ConsumeData {
 						break;
 				case 4: countMembers();
 						break;
-                                case 5: createBirthdayTable();
-                                        break;
-                                case 8: resetDb();
+                                case 5: insertBirthdays();
+                                                break;
+                                case 6: searchBirthday();
+                                                break;
+                                case 7: resetDb();
                                                 break;
 				case 0: terminate();
 						break;
-				default: System.out.println("Choice out of range! Please type from 0 to 8!");
+				default: System.out.println("Choice out of range! Please type from 0 to 7!");
 				}
 			}
 			catch (InputMismatchException e) {
@@ -257,10 +263,9 @@ public class ConsumeData {
             System.out.println("(2) Find Member");
             System.out.println("(3) Update Landline Phone");
             System.out.println("(4) Check Total Number of Members");
-            System.out.println("(5) Create Table Birthdays");
-            System.out.println("(6) Insert All birthdays");
-            System.out.println("(7) Find People Per birthday");
-            System.out.println("(8) Reset Database");
+            System.out.println("(5) Insert All birthdays");
+            System.out.println("(6) Find People Per birthday");
+            System.out.println("(7) Reset Database");
             System.out.println("(0) Exit");
     }
     
@@ -319,7 +324,7 @@ public class ConsumeData {
         //STEP 4: Execute a query 
         System.out.println("Creating statements...");
         String sql;
-        sql = "DROP TABLE members;";
+        sql = "DROP TABLE birthdays;";
         try {
             stmt = conn.createStatement();
         } catch (SQLException ex) {
@@ -328,6 +333,8 @@ public class ConsumeData {
         }
         
         try {
+            stmt.addBatch(sql);
+            sql = "DROP TABLE members;";
             stmt.addBatch(sql);
             sql = "CREATE TABLE members (" +
                 "member_id int AUTO_INCREMENT," +
@@ -343,7 +350,15 @@ public class ConsumeData {
                     "('Mike', 'Michailidis', 2100000201, 6979320383)," +
                     "('Antonis', 'Antoniadis', 2100000201, 6979320383);";
             stmt.addBatch(sql);
+            sql = "CREATE TABLE birthdays (" +
+                    " birthday date," +
+                    " member_id int," +
+                    " PRIMARY KEY (birthday, member_id)," +
+                    " CONSTRAINT birthdays_fk_1 FOREIGN KEY (member_id) REFERENCES members (member_id)" +
+                   ");";
+            stmt.addBatch(sql);
             stmt.executeBatch();
+            System.out.println("Database successfully recreated!");
         } catch (SQLException ex) {
             System.out.println("Moufa to query...");
         }finally{
@@ -351,24 +366,88 @@ public class ConsumeData {
         }
     }
 
-    private static void createBirthdayTable() {
-        
-        
-        String sql = "CREATE TABLE birthdays (" +
-            "member_id int AUTO_INCREMENT," +
-            " f_name text," +
-            " l_name text," +
-            " landline text," +
-            " mobile text," +
-            " PRIMARY KEY (member_id)" +
-            ");";
+    private static ArrayList<User> getMembers() {
+        connect();
+
+        //STEP 4: Execute a query 
+        System.out.println("Creating statement...");
+        try {
+            stmt = conn.createStatement();
+        } catch (SQLException ex) {
+            System.out.println("Paei to statement gia vrouves");
+            closeConnection();
+            return null;
+        }
+        String sql;
+        sql = "SELECT * FROM members";
+        try {
+            rs = stmt.executeQuery(sql);
+            //STEP 5: Extract data from result set
+            ArrayList<User> userList = new ArrayList<>();
+            while (rs.next()) {
+                //Retrieve by column name
+                User user = new User();
+                user.id = rs.getInt("member_id");
+                user.firstname = rs.getString("f_name");
+                user.lastname = rs.getString("l_name");
+                userList.add(user);
+            }
+            rs.close();
+            return userList;
+        } catch (SQLException ex) {
+            System.out.println("Moufa to query...");
+            return null;
+        } finally{
+            //STEP 6 : Clean-up enviroment
+            closeConnection();
+        }
     }
     
-    
-    
-
-    private static class User {
+    private static void searchBirthday(){
         
+    }
+
+    private static void insertBirthdays() {
+        ArrayList<User> userList = getMembers();
+        if (userList!=null){
+            connect();
+            setBirthday(userList);
+        }else{
+            System.out.println("No members were found...");
+        }
+    }
+    
+    private static void setBirthday(ArrayList<User> userList){
+            Iterator<User> it = userList.iterator();
+            Scanner scanner = new Scanner(System.in);
+            String sql = "INSERT INTO birthdays (member_id, birthday) VALUES (?, ?);";
+            while (it.hasNext()){
+                User user = it.next();
+                System.out.println("Please give birthday date of " + user.firstname + " " + user.lastname + " (format: (yyyy-MM-DD):");
+                LocalDate birthday = LocalDate.parse(scanner.nextLine());
+                try {
+                    stmt = conn.prepareStatement(sql);
+                    ((PreparedStatement) stmt).setInt(1, user.id);
+                    ((PreparedStatement) stmt).setDate(2, Date.valueOf(birthday)); 
+                } catch (SQLException ex) {
+                    System.out.println("Paei to statement gia vrouves");
+                }
+                try {
+                    int rs = ((PreparedStatement) stmt).executeUpdate();
+                    //STEP 5: Extract data from result set
+                    if (rs > 0) {
+                        System.out.println("New birthday successfully inserted!");
+                    }else{
+                        System.out.println("Birthday insertion failed!");
+                    }
+                } catch (SQLException ex) {
+                    System.out.println("Moufa to query...");
+                }
+            }
+            closeConnection();
+    }
+    
+    private static class User {
         protected int id;
         protected String firstname;
         protected String lastname;
